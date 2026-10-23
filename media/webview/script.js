@@ -21,6 +21,9 @@ function initTermSnap(initialData) {
   const paddingValue = document.getElementById("padding-value");
   const windowControlsCheckbox = document.getElementById("window-controls");
   const lineNumbersCheckbox = document.getElementById("line-numbers");
+  const wrapTextCheckbox = document.getElementById("wrap-text");
+  const wrapWidthInput = document.getElementById("wrap-width");
+  const widthHandle = document.getElementById("width-handle");
 
   // Buttons
   const btnSave = document.getElementById("btn-save");
@@ -28,7 +31,10 @@ function initTermSnap(initialData) {
   const btnCopyText = document.getElementById("btn-copy-text");
 
   // Store the raw text (unescaped) for line-number toggling
-  const rawText = terminalText.textContent;
+  let rawText = terminalText.textContent;
+  const MIN_WRAP_WIDTH = 240;
+  const MAX_WRAP_WIDTH = 2400;
+  let wrapWidth = clampWidth(config.wrapWidth);
 
   // ── Apply initial styles via JS (inline style attrs are blocked by CSP) ──
   captureArea.style.backgroundColor = config.backgroundColor;
@@ -75,6 +81,93 @@ function initTermSnap(initialData) {
     notifySettingsChanged("padding", Number(pad));
   });
 
+  // ── Optional screenshot width / wrapping ────────────
+  // The terminal window has a fixed width only in wrap mode. The capture
+  // area is automatically sized around it (including its outer padding).
+  function clampWidth(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return 800;
+    return Math.max(MIN_WRAP_WIDTH, Math.min(MAX_WRAP_WIDTH, Math.round(number)));
+  }
+
+  function setWrapWidth(value, persist = false, updateInput = true) {
+    wrapWidth = clampWidth(value);
+    if (updateInput) {
+      wrapWidthInput.value = String(wrapWidth);
+    }
+    widthHandle.setAttribute("aria-valuenow", String(wrapWidth));
+    if (wrapTextCheckbox.checked) {
+      terminalWindow.style.width = wrapWidth + "px";
+    }
+    if (persist) {
+      notifySettingsChanged("wrapWidth", wrapWidth);
+    }
+  }
+
+  function applyWrapping() {
+    const enabled = wrapTextCheckbox.checked;
+    terminalText.classList.toggle("wrap-enabled", enabled);
+    terminalWindow.style.width = enabled ? wrapWidth + "px" : "";
+    terminalWindow.style.maxWidth = enabled ? "none" : "";
+    wrapWidthInput.disabled = !enabled;
+    widthHandle.hidden = !enabled;
+    widthHandle.tabIndex = enabled ? 0 : -1;
+  }
+
+  setWrapWidth(wrapWidth);
+  applyWrapping();
+
+  wrapTextCheckbox.addEventListener("change", () => {
+    applyWrapping();
+    notifySettingsChanged("wrapText", wrapTextCheckbox.checked);
+  });
+
+  // Update the preview while typing; save only when the input is committed.
+  wrapWidthInput.addEventListener("input", () => {
+    const typedWidth = Number(wrapWidthInput.value);
+    // Don't overwrite partial typing (e.g. "5" on the way to "500").
+    if (wrapWidthInput.value !== "" && Number.isFinite(typedWidth) &&
+        typedWidth >= MIN_WRAP_WIDTH && typedWidth <= MAX_WRAP_WIDTH) {
+      setWrapWidth(typedWidth, false, false);
+    }
+  });
+  wrapWidthInput.addEventListener("change", () => {
+    setWrapWidth(wrapWidthInput.value || wrapWidth, true);
+  });
+
+  // The resize grip is NOT a descendant of the captured screenshot.
+  let drag = null;
+  widthHandle.addEventListener("pointerdown", (event) => {
+    if (!wrapTextCheckbox.checked || event.button !== 0) return;
+    drag = { pointerId: event.pointerId, startX: event.clientX, startWidth: wrapWidth };
+    widthHandle.setPointerCapture(event.pointerId);
+    widthHandle.classList.add("dragging");
+    event.preventDefault();
+  });
+  widthHandle.addEventListener("pointermove", (event) => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setWrapWidth(drag.startWidth + event.clientX - drag.startX);
+  });
+  function finishDrag(event) {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    drag = null;
+    widthHandle.classList.remove("dragging");
+    if (widthHandle.hasPointerCapture(event.pointerId)) {
+      widthHandle.releasePointerCapture(event.pointerId);
+    }
+    setWrapWidth(wrapWidth, true);
+  }
+  widthHandle.addEventListener("pointerup", finishDrag);
+  widthHandle.addEventListener("pointercancel", finishDrag);
+  widthHandle.addEventListener("keydown", (event) => {
+    if (!wrapTextCheckbox.checked) return;
+    const step = event.shiftKey ? 50 : 10;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      setWrapWidth(wrapWidth + (event.key === "ArrowRight" ? step : -step), true);
+      event.preventDefault();
+    }
+  });
+
   // ── Window controls toggle ───────────────────────────
   windowControlsCheckbox.addEventListener("change", () => {
     const show = windowControlsCheckbox.checked;
@@ -89,34 +182,31 @@ function initTermSnap(initialData) {
   });
 
   function renderText(showLineNumbers) {
+    terminalText.classList.toggle("with-line-numbers", showLineNumbers);
     if (!showLineNumbers) {
       terminalText.textContent = rawText;
       return;
     }
 
-    const lines = rawText.split("\n");
-    terminalText.innerHTML = "";
-    lines.forEach((line, i) => {
-      const lineNumSpan = document.createElement("span");
-      lineNumSpan.className = "line-number";
-      lineNumSpan.textContent = String(i + 1);
+    // Keep each line number in a fixed column. A wrapped continuation stays
+    // aligned with its text rather than moving underneath its line number.
+    const fragment = document.createDocumentFragment();
+    rawText.split("\n").forEach((line, i) => {
+      const row = document.createElement("span");
+      row.className = "terminal-line";
 
-      const textNode = document.createTextNode(escapeHtml(line) + "\n");
+      const lineNumber = document.createElement("span");
+      lineNumber.className = "line-number";
+      lineNumber.textContent = String(i + 1);
 
-      terminalText.appendChild(lineNumSpan);
-      // Use a text node so content stays escaped
-      const span = document.createElement("span");
-      span.textContent = line + "\n";
-      terminalText.appendChild(span);
+      const content = document.createElement("span");
+      content.className = "line-content";
+      content.textContent = line;
+
+      row.append(lineNumber, content);
+      fragment.appendChild(row);
     });
-  }
-
-  function escapeHtml(str) {
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    terminalText.replaceChildren(fragment);
   }
 
   // Apply initial line numbers if configured
@@ -191,10 +281,8 @@ function initTermSnap(initialData) {
   window.addEventListener("message", (event) => {
     const message = event.data;
     if (message.type === "updateText") {
-      terminalText.textContent = message.text;
-      if (lineNumbersCheckbox.checked) {
-        renderText(true);
-      }
+      rawText = message.text;
+      renderText(lineNumbersCheckbox.checked);
     }
   });
 }

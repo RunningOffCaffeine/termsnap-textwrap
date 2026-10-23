@@ -40,7 +40,8 @@ body {
 }
 
 .toolbar-group select,
-.toolbar-group input[type="range"] {
+.toolbar-group input[type="range"],
+.toolbar-group input[type="number"] {
   accent-color: var(--vscode-focusBorder, #007acc);
 }
 
@@ -51,6 +52,21 @@ body {
   border-radius: 4px;
   padding: 3px 6px;
   font-size: 12px;
+}
+
+
+.toolbar-group .width-input {
+  width: 78px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #ccc);
+  border: 1px solid var(--vscode-input-border, #555);
+}
+
+.toolbar-group .width-input:disabled {
+  opacity: 0.5;
 }
 
 .toolbar-group input[type="checkbox"] {
@@ -94,6 +110,50 @@ body {
 .preview-container {
   overflow-x: auto;
   padding: 24px 0;
+}
+
+/* The handle stays outside capture-area so it is never included in PNGs. */
+.preview-stage {
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+}
+
+.resize-handle {
+  width: 20px;
+  margin-left: 8px;
+  flex: none;
+  display: block;
+  background: var(--vscode-sideBar-background, #252526);
+  border: 1px solid var(--vscode-widget-border, #555);
+  border-radius: 6px;
+  color: var(--vscode-descriptionForeground, #aaa);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.resize-handle[hidden] {
+  display: none;
+}
+
+.resize-handle:hover,
+.resize-handle:focus-visible,
+.resize-handle.dragging {
+  background: var(--vscode-list-hoverBackground, #333);
+  outline: 2px solid var(--vscode-focusBorder, #007acc);
+  outline-offset: 1px;
+}
+
+.resize-grip {
+  display: block;
+  position: sticky;
+  top: 16px;
+  margin: 16px auto 0;
+  height: 38px;
+  width: 7px;
+  border-left: 2px dotted currentColor;
+  border-right: 2px dotted currentColor;
 }
 
 /* ── Outer Background (captured area) ────────────────── */
@@ -178,16 +238,51 @@ body {
   overflow-x: auto;
 }
 
+/* Wrapping only affects the captured terminal text, never the raw clipboard text. */
+.terminal-body pre.wrap-enabled {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-x: visible;
+}
+
 /* ── Line Numbers ────────────────────────────────────── */
 
+.terminal-line {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Without wrapping, keep each original line intact and use its natural width. */
+.terminal-body pre.with-line-numbers:not(.wrap-enabled) .terminal-line {
+  width: max-content;
+  min-width: 100%;
+}
+
+.terminal-body pre.with-line-numbers.wrap-enabled .terminal-line {
+  width: 100%;
+}
+
 .line-number {
-  display: inline-block;
+  display: block;
+  flex: 0 0 3em;
   width: 3em;
   text-align: right;
   margin-right: 1em;
   color: var(--text-color);
   opacity: 0.3;
   user-select: none;
+}
+
+.line-content {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre;
+}
+
+.terminal-body pre.wrap-enabled .line-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* ── Themes ──────────────────────────────────────────── */

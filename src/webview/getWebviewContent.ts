@@ -69,6 +69,16 @@ export function getWebviewContent(
     </div>
     <div class="toolbar-group">
       <label>
+        <input type="checkbox" id="wrap-text" ${config.wrapText ? "checked" : ""}>
+        Wrap Text
+      </label>
+    </div>
+    <div class="toolbar-group">
+      <label for="wrap-width">Width (px)</label>
+      <input type="number" id="wrap-width" class="width-input" min="240" max="2400" step="10" value="${Math.max(240, Math.min(2400, Math.round(config.wrapWidth)))}" ${config.wrapText ? "" : "disabled"}>
+    </div>
+    <div class="toolbar-group">
+      <label>
         <input type="checkbox" id="window-controls" ${config.showWindowControls ? "checked" : ""}>
         Window Controls
       </label>
@@ -87,20 +97,25 @@ export function getWebviewContent(
   </div>
 
   <div class="preview-container">
-    <div id="capture-area" class="outer-background">
-      <div id="terminal-window" class="terminal-window theme-${config.theme}">
-        <div id="title-bar" class="title-bar">
-          <div class="window-controls">
-            <span class="dot dot-red"></span>
-            <span class="dot dot-yellow"></span>
-            <span class="dot dot-green"></span>
+    <div class="preview-stage">
+      <div id="capture-area" class="outer-background">
+        <div id="terminal-window" class="terminal-window theme-${config.theme}">
+          <div id="title-bar" class="title-bar">
+            <div class="window-controls">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-yellow"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="title-text">Terminal</div>
+            <div class="title-spacer"></div>
           </div>
-          <div class="title-text">Terminal</div>
-          <div class="title-spacer"></div>
+          <div id="terminal-body" class="terminal-body">
+            <pre id="terminal-text">${escapedText}</pre>
+          </div>
         </div>
-        <div id="terminal-body" class="terminal-body">
-          <pre id="terminal-text">${escapedText}</pre>
-        </div>
+      </div>
+      <div id="width-handle" class="resize-handle" role="separator" aria-label="Resize terminal width" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="2400" aria-valuenow="${Math.max(240, Math.min(2400, Math.round(config.wrapWidth)))}" title="Drag to resize • Arrow keys for 10px steps" tabindex="0" ${config.wrapText ? "" : "hidden"}>
+        <span class="resize-grip" aria-hidden="true"></span>
       </div>
     </div>
   </div>
@@ -108,7 +123,7 @@ export function getWebviewContent(
   <script nonce="${nonce}" src="${htmlToImageUri}"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
   <script nonce="${nonce}">
-    initTermSnap(${JSON.stringify({ text: escapedText, config })});
+    initTermSnap(${JSON.stringify({ config }).replace(/</g, "\\u003c")});
   </script>
 </body>
 </html>`;

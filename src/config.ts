@@ -4,6 +4,8 @@ export interface TermSnapConfig {
   theme: string;
   fontSize: number;
   padding: number;
+  wrapText: boolean;
+  wrapWidth: number;
   showWindowControls: boolean;
   showLineNumbers: boolean;
   backgroundColor: string;
@@ -18,6 +20,8 @@ export function getConfig(): TermSnapConfig {
     theme: config.get<string>("theme", "dracula"),
     fontSize: config.get<number>("fontSize", 14),
     padding: config.get<number>("padding", 16),
+    wrapText: config.get<boolean>("wrapText", false),
+    wrapWidth: config.get<number>("wrapWidth", 800),
     showWindowControls: config.get<boolean>("showWindowControls", true),
     showLineNumbers: config.get<boolean>("showLineNumbers", false),
     backgroundColor: config.get<string>("backgroundColor", "#1e1e2e"),

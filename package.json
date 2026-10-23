@@ -10,7 +10,18 @@
     "type": "git",
     "url": "https://github.com/kushakjafry/termsnap"
   },
-  "keywords": ["terminal", "screenshot", "capture", "carbon", "image", "snippet", "share", "clipboard", "png", "export"],
+  "keywords": [
+    "terminal",
+    "screenshot",
+    "capture",
+    "carbon",
+    "image",
+    "snippet",
+    "share",
+    "clipboard",
+    "png",
+    "export"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -83,6 +94,18 @@
           "minimum": 0,
           "maximum": 64,
           "description": "Padding inside the terminal window"
+        },
+        "termsnap.wrapText": {
+          "type": "boolean",
+          "default": false,
+          "description": "Wrap long terminal lines in screenshots. Disable to preserve tables, ASCII art, and the original terminal alignment."
+        },
+        "termsnap.wrapWidth": {
+          "type": "integer",
+          "default": 800,
+          "minimum": 240,
+          "maximum": 2400,
+          "description": "Terminal window width in pixels when text wrapping is enabled (excluding the outer screenshot background). Can also be adjusted in the preview."
         },
         "termsnap.showWindowControls": {
           "type": "boolean",

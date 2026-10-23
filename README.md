@@ -20,8 +20,9 @@ Capture beautiful, Carbon-style screenshots of your terminal output — directly
 - **11 built-in themes** — Dracula, One Dark, Monokai, Solarized Dark, Night Owl, GitHub Dark, Catppuccin Mocha, Tokyo Night, Gruvbox Dark, Nord, Solarized Light
 - **Custom themes** — Define your own background, text, and title bar colors
 - **Live preview controls** — Adjust theme, font size, padding, window chrome, and line numbers in real time
+- **Optional text wrapping** — Enable wrapping and set an exact terminal width (240–2400px) or drag the grip beside the preview, similar to CodeSnap
 - **Export options** — Save as PNG, copy image to clipboard, or copy raw text
-- **Preserves layout** — Tables, ASCII art, box-drawing characters, and alignment are fully preserved
+- **Preserves layout** — Wrapping is off by default so tables, ASCII art, box-drawing characters, and alignment remain intact
 
 ## Works great for
 
@@ -36,7 +37,7 @@ Capture beautiful, Carbon-style screenshots of your terminal output — directly
 2. Run your commands
 3. **Select the terminal text** you want to capture
 4. Press `Cmd+Shift+S` (Mac) / `Ctrl+Shift+S` (Windows/Linux)
-5. The TermSnap preview panel opens — adjust theme and settings as needed
+5. The TermSnap preview panel opens — adjust theme and settings as needed; optionally enable **Wrap Text** and set **Width (px)** or drag the right-side resize grip (arrow keys also work when the grip is focused)
 6. Click **Save as PNG**, **Copy Image**, or **Copy Text**
 
 You can also open the command palette (`Cmd+Shift+P`) and search for **"TermSnap: Capture Terminal Screenshot"**.
@@ -65,12 +66,27 @@ You can also open the command palette (`Cmd+Shift+P`) and search for **"TermSnap
 | `termsnap.theme` | `dracula` | Screenshot theme |
 | `termsnap.fontSize` | `14` | Font size (10–24px) |
 | `termsnap.padding` | `16` | Inner padding (0–64px) |
+| `termsnap.wrapText` | `false` | Enable word wrapping for long terminal lines |
+| `termsnap.wrapWidth` | `800` | Width of the terminal window (240–2400px) when wrapping is enabled; excludes outer background padding |
 | `termsnap.showWindowControls` | `true` | Show macOS-style dots |
 | `termsnap.showLineNumbers` | `false` | Show line numbers |
 | `termsnap.backgroundColor` | `#1e1e2e` | Outer background color |
 | `termsnap.customBackground` | `#1e1e2e` | Custom theme: background |
 | `termsnap.customTextColor` | `#f8f8f2` | Custom theme: text color |
 | `termsnap.customTitleBarColor` | `#161616` | Custom theme: title bar |
+
+## Wrapping and Resizing
+
+Wrapping is **off by default** to preserve terminal tables and ASCII art. Check **Wrap Text** in the preview or set:
+
+```json
+{
+  "termsnap.wrapText": true,
+  "termsnap.wrapWidth": 800
+}
+```
+
+You can type a width in pixels or drag the resize grip on the right of the preview. Width changes are reflected immediately and saved to VS Code settings when committed. The grip is not included in the generated PNG. When line numbers are enabled, wrapped continuation lines remain indented under their associated text. **Copy Text** still copies the original, unwrapped terminal selection. Note that automatic wrapping can break the visual alignment of terminal tables and diagrams, so switch wrapping off for those captures.
 
 ## Custom Theme
 
