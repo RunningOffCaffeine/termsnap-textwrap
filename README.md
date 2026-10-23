@@ -20,7 +20,7 @@ Capture beautiful, Carbon-style screenshots of your terminal output — directly
 - **12 built-in themes** — Andromeda, Dracula, One Dark, Monokai, Solarized Dark, Night Owl, GitHub Dark, Catppuccin Mocha, Tokyo Night, Gruvbox Dark, Nord, Solarized Light
 - **Custom themes** — Define your own background, text, and title bar colors
 - **Live preview controls** — Adjust theme, font size, padding, window chrome, and line numbers in real time
-- **Optional text wrapping** — Enable wrapping and set an exact terminal width (240–2400px) or drag the grip beside the preview, similar to CodeSnap
+- **Optional text wrapping** — Enable wrapping and set an exact terminal width (240–2400px) or drag the grip beside the preview, similar to [CodeSnap](https://github.com/kufii/CodeSnap)
 - **Export options** — Save as PNG, copy image to clipboard, or copy raw text
 - **Preserves layout** — Wrapping is off by default so tables, ASCII art, box-drawing characters, and alignment remain intact
 
