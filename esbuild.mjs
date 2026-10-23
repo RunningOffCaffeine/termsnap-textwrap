@@ -1,6 +1,4 @@
 import * as esbuild from "esbuild";
-import { copyFileSync, mkdirSync, existsSync } from "fs";
-import { resolve, dirname } from "path";
 
 const isWatch = process.argv.includes("--watch");
 

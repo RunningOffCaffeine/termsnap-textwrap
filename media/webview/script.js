@@ -3,8 +3,8 @@
 
 const vscode = acquireVsCodeApi();
 
-function initTermSnap(initialData) {
-  const { config } = initialData;
+window.initTermSnap = (initialData) => {
+  const { config, html } = initialData;
 
   // DOM elements
   const captureArea = document.getElementById("capture-area");
@@ -21,6 +21,7 @@ function initTermSnap(initialData) {
   const paddingValue = document.getElementById("padding-value");
   const windowControlsCheckbox = document.getElementById("window-controls");
   const lineNumbersCheckbox = document.getElementById("line-numbers");
+  const terminalColorsCheckbox = document.getElementById("terminal-colors");
   const wrapTextCheckbox = document.getElementById("wrap-text");
   const wrapWidthInput = document.getElementById("wrap-width");
   const widthHandle = document.getElementById("width-handle");
@@ -32,6 +33,29 @@ function initTermSnap(initialData) {
 
   // Store the raw text (unescaped) for line-number toggling
   let rawText = terminalText.textContent;
+  // Parse xterm's clipboard HTML in an inert document, then reconstruct ONLY
+  // plain text and allowlisted inline styles. Never insert raw clipboard HTML.
+  const formattedLines = parseTerminalHtml(html);
+  // Detect an unrelated/stale text/html clipboard flavor before applying it.
+  // Terminal serialization can retain right-hand padding, so ignore trailing
+  // spaces for this comparison but never change the copied plain text.
+  const normalizeForMatch = (value) =>
+    value
+      .replace(/\r\n/g, "\n")
+      .replace(/[ \t]+$/gm, "")
+      .replace(/\n+$/, "");
+  const formattedText =
+    formattedLines ?
+      formattedLines.map((line) => line.textContent).join("\n")
+    : "";
+  if (
+    !formattedLines ||
+    normalizeForMatch(formattedText) !== normalizeForMatch(rawText)
+  ) {
+    terminalColorsCheckbox.checked = false;
+    terminalColorsCheckbox.disabled = true;
+  }
+
   const MIN_WRAP_WIDTH = 240;
   const MAX_WRAP_WIDTH = 2400;
   let wrapWidth = clampWidth(config.wrapWidth);
@@ -48,7 +72,10 @@ function initTermSnap(initialData) {
   function applyCustomColors() {
     terminalWindow.style.setProperty("--custom-bg", config.customBackground);
     terminalWindow.style.setProperty("--custom-text", config.customTextColor);
-    terminalWindow.style.setProperty("--custom-titlebar", config.customTitleBarColor);
+    terminalWindow.style.setProperty(
+      "--custom-titlebar",
+      config.customTitleBarColor,
+    );
   }
 
   if (config.theme === "custom") {
@@ -87,7 +114,10 @@ function initTermSnap(initialData) {
   function clampWidth(value) {
     const number = Number(value);
     if (!Number.isFinite(number)) return 800;
-    return Math.max(MIN_WRAP_WIDTH, Math.min(MAX_WRAP_WIDTH, Math.round(number)));
+    return Math.max(
+      MIN_WRAP_WIDTH,
+      Math.min(MAX_WRAP_WIDTH, Math.round(number)),
+    );
   }
 
   function setWrapWidth(value, persist = false, updateInput = true) {
@@ -126,8 +156,12 @@ function initTermSnap(initialData) {
   wrapWidthInput.addEventListener("input", () => {
     const typedWidth = Number(wrapWidthInput.value);
     // Don't overwrite partial typing (e.g. "5" on the way to "500").
-    if (wrapWidthInput.value !== "" && Number.isFinite(typedWidth) &&
-        typedWidth >= MIN_WRAP_WIDTH && typedWidth <= MAX_WRAP_WIDTH) {
+    if (
+      wrapWidthInput.value !== "" &&
+      Number.isFinite(typedWidth) &&
+      typedWidth >= MIN_WRAP_WIDTH &&
+      typedWidth <= MAX_WRAP_WIDTH
+    ) {
       setWrapWidth(typedWidth, false, false);
     }
   });
@@ -139,7 +173,11 @@ function initTermSnap(initialData) {
   let drag = null;
   widthHandle.addEventListener("pointerdown", (event) => {
     if (!wrapTextCheckbox.checked || event.button !== 0) return;
-    drag = { pointerId: event.pointerId, startX: event.clientX, startWidth: wrapWidth };
+    drag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: wrapWidth,
+    };
     widthHandle.setPointerCapture(event.pointerId);
     widthHandle.classList.add("dragging");
     event.preventDefault();
@@ -163,7 +201,10 @@ function initTermSnap(initialData) {
     if (!wrapTextCheckbox.checked) return;
     const step = event.shiftKey ? 50 : 10;
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-      setWrapWidth(wrapWidth + (event.key === "ArrowRight" ? step : -step), true);
+      setWrapWidth(
+        wrapWidth + (event.key === "ArrowRight" ? step : -step),
+        true,
+      );
       event.preventDefault();
     }
   });
@@ -181,37 +222,150 @@ function initTermSnap(initialData) {
     notifySettingsChanged("showLineNumbers", lineNumbersCheckbox.checked);
   });
 
+  // xterm's HTML serializer emits a global <div> with a hard-coded default
+  // background and a child <div> per terminal line, containing styled spans.
+  // Deliberately skip global styles so the selected TermSnap theme remains
+  // the terminal background; only use explicit foreground/background runs.
+  function parseTerminalHtml(markup) {
+    if (typeof markup !== "string" || !markup) return null;
+    const doc = new DOMParser().parseFromString(markup, "text/html");
+    const pre = doc.querySelector("pre");
+    if (!pre) return null;
+
+    const outer = pre.firstElementChild;
+    if (!outer || outer.tagName !== "DIV") return null;
+    const rows = Array.from(outer.children).filter(
+      (el) => el.tagName === "DIV",
+    );
+    if (!rows.length) return null;
+
+    const safeColor = (value) => {
+      const v = value.trim();
+      return /^(?:#[\da-f]{3,8}|rgba?\([\d\s.,%]+\))$/i.test(v) ? v : "";
+    };
+
+    function rebuildSafe(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return document.createTextNode(node.textContent || "");
+      }
+      // Terminal HTML should only have spans (no images, links or scripts).
+      if (node.nodeType !== Node.ELEMENT_NODE || node.tagName !== "SPAN") {
+        return null;
+      }
+      const span = document.createElement("span");
+      // Reading element.style on a DOMParser result is blocked by the
+      // webview's strict CSP. Read the attribute as text and parse only
+      // allowlisted, non-executable CSS properties instead.
+      const safeProperties = Object.create(null);
+      const declarations = (node.getAttribute("style") || "").split(";");
+      for (const declaration of declarations) {
+        const separator = declaration.indexOf(":");
+        if (separator < 0) continue;
+        const name = declaration.slice(0, separator).trim().toLowerCase();
+        const value = declaration.slice(separator + 1).trim();
+        if (name) safeProperties[name] = value;
+      }
+      const css = (name) => safeProperties[name] || "";
+      const color = safeColor(css("color"));
+      const background = safeColor(css("background-color"));
+      if (color) span.style.color = color;
+      if (background) span.style.backgroundColor = background;
+      if (/^(?:bold|[5-9]00)$/i.test(css("font-weight")))
+        span.style.fontWeight = "bold";
+      if (css("font-style") === "italic") span.style.fontStyle = "italic";
+      const decoration = css("text-decoration-line");
+      if (
+        /^(?:underline|line-through|overline|underline line-through|line-through underline)$/.test(
+          decoration,
+        )
+      ) {
+        span.style.textDecorationLine = decoration;
+      }
+      const decorationColor = safeColor(css("text-decoration-color"));
+      if (decorationColor) span.style.textDecorationColor = decorationColor;
+      if (
+        ["solid", "double", "dotted", "dashed", "wavy"].includes(
+          css("text-decoration-style"),
+        )
+      ) {
+        span.style.textDecorationStyle = css("text-decoration-style");
+      }
+      if (css("text-decoration").includes("underline"))
+        span.style.textDecorationLine = "underline";
+      const opacity = Number(css("opacity"));
+      if (
+        css("opacity") &&
+        Number.isFinite(opacity) &&
+        opacity >= 0 &&
+        opacity < 1
+      ) {
+        span.style.opacity = String(opacity);
+      }
+      if (css("visibility") === "hidden") span.style.visibility = "hidden";
+      for (const child of node.childNodes) {
+        const safe = rebuildSafe(child);
+        if (safe) span.appendChild(safe);
+      }
+      return span;
+    }
+
+    return rows.map((row) => {
+      const fragment = document.createDocumentFragment();
+      for (const child of row.childNodes) {
+        const safe = rebuildSafe(child);
+        if (safe) fragment.appendChild(safe);
+      }
+      return fragment;
+    });
+  }
+
   function renderText(showLineNumbers) {
     terminalText.classList.toggle("with-line-numbers", showLineNumbers);
-    if (!showLineNumbers) {
+    const colorsActive =
+      !terminalColorsCheckbox.disabled && terminalColorsCheckbox.checked;
+    if (!colorsActive && !showLineNumbers) {
       terminalText.textContent = rawText;
       return;
     }
 
-    // Keep each line number in a fixed column. A wrapped continuation stays
-    // aligned with its text rather than moving underneath its line number.
     const fragment = document.createDocumentFragment();
-    rawText.split("\n").forEach((line, i) => {
+    const textLines = colorsActive ? formattedLines : rawText.split("\n");
+    textLines.forEach((line, i) => {
       const row = document.createElement("span");
-      row.className = "terminal-line";
+      row.className =
+        showLineNumbers ? "terminal-line" : "terminal-colored-line";
 
-      const lineNumber = document.createElement("span");
-      lineNumber.className = "line-number";
-      lineNumber.textContent = String(i + 1);
+      if (showLineNumbers) {
+        const lineNumber = document.createElement("span");
+        lineNumber.className = "line-number";
+        lineNumber.textContent = String(i + 1);
+        row.appendChild(lineNumber);
+      }
 
       const content = document.createElement("span");
       content.className = "line-content";
-      content.textContent = line;
-
-      row.append(lineNumber, content);
+      if (colorsActive) {
+        content.appendChild(line.cloneNode(true));
+      } else {
+        content.textContent = line;
+      }
+      row.appendChild(content);
       fragment.appendChild(row);
     });
     terminalText.replaceChildren(fragment);
   }
 
+  terminalColorsCheckbox.addEventListener("change", () => {
+    renderText(lineNumbersCheckbox.checked);
+    notifySettingsChanged(
+      "preserveTerminalColors",
+      terminalColorsCheckbox.checked,
+    );
+  });
+
   // Apply initial line numbers if configured
-  if (config.showLineNumbers) {
-    renderText(true);
+  if (config.showLineNumbers || terminalColorsCheckbox.checked) {
+    renderText(config.showLineNumbers);
   }
 
   // ── Save as PNG ──────────────────────────────────────
@@ -269,7 +423,9 @@ function initTermSnap(initialData) {
   btnCopyText.addEventListener("click", () => {
     vscode.postMessage({ type: "copyText", text: rawText });
     btnCopyText.textContent = "Copied!";
-    setTimeout(() => { btnCopyText.textContent = "Copy Text"; }, 1500);
+    setTimeout(() => {
+      btnCopyText.textContent = "Copy Text";
+    }, 1500);
   });
 
   // ── Notify extension of settings changes ─────────────
@@ -282,7 +438,10 @@ function initTermSnap(initialData) {
     const message = event.data;
     if (message.type === "updateText") {
       rawText = message.text;
+      // A new plain-text payload doesn't correspond to the previous HTML.
+      terminalColorsCheckbox.checked = false;
+      terminalColorsCheckbox.disabled = true;
       renderText(lineNumbersCheckbox.checked);
     }
   });
-}
+};

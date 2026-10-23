@@ -2,15 +2,14 @@ import * as vscode from "vscode";
 import { getWebviewContent } from "./getWebviewContent";
 import { handleMessage } from "./messageHandler";
 import { getConfig } from "../config";
+import { CapturedTerminal } from "../captureTerminal";
 
 let currentPanel: vscode.WebviewPanel | undefined;
-let storedExtensionUri: vscode.Uri | undefined;
 
 export function createOrShowPanel(
   extensionUri: vscode.Uri,
-  terminalText: string
+  capture: CapturedTerminal,
 ): vscode.WebviewPanel {
-  storedExtensionUri = extensionUri;
   const config = getConfig();
 
   if (currentPanel) {
@@ -18,8 +17,8 @@ export function createOrShowPanel(
     currentPanel.webview.html = getWebviewContent(
       currentPanel.webview,
       extensionUri,
-      terminalText,
-      config
+      capture,
+      config,
     );
     return currentPanel;
   }
@@ -34,7 +33,7 @@ export function createOrShowPanel(
         vscode.Uri.joinPath(extensionUri, "media", "webview"),
       ],
       retainContextWhenHidden: true,
-    }
+    },
   );
 
   currentPanel = panel;
@@ -42,13 +41,11 @@ export function createOrShowPanel(
   panel.webview.html = getWebviewContent(
     panel.webview,
     extensionUri,
-    terminalText,
-    config
+    capture,
+    config,
   );
 
-  panel.webview.onDidReceiveMessage((message) =>
-    handleMessage(message, panel)
-  );
+  panel.webview.onDidReceiveMessage((message) => handleMessage(message));
 
   panel.onDidDispose(() => {
     currentPanel = undefined;

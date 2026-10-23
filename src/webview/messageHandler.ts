@@ -26,22 +26,25 @@ interface SettingsChangedMessage {
   value: unknown;
 }
 
-type WebviewMessage = SaveMessage | CopyMessage | CopyTextMessage | SettingsChangedMessage;
+type WebviewMessage =
+  | SaveMessage
+  | CopyMessage
+  | CopyTextMessage
+  | SettingsChangedMessage;
 
-export async function handleMessage(
-  message: WebviewMessage,
-  panel: vscode.WebviewPanel
-): Promise<void> {
+export async function handleMessage(message: WebviewMessage): Promise<void> {
   switch (message.type) {
     case "save":
       await handleSave(message.dataUrl);
       break;
     case "copy":
-      await handleCopy(message.dataUrl, panel);
+      await handleCopy(message.dataUrl);
       break;
     case "copyText":
       await vscode.env.clipboard.writeText(message.text);
-      vscode.window.showInformationMessage("TermSnap: Text copied to clipboard!");
+      vscode.window.showInformationMessage(
+        "TermSnap: Text copied to clipboard!",
+      );
       break;
     case "settingsChanged":
       await handleSettingsChanged(message.key, message.value);
@@ -62,13 +65,12 @@ async function handleSave(dataUrl: string): Promise<void> {
   const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
   const buffer = Buffer.from(base64Data, "base64");
   await vscode.workspace.fs.writeFile(uri, buffer);
-  vscode.window.showInformationMessage(`TermSnap: Screenshot saved to ${uri.fsPath}`);
+  vscode.window.showInformationMessage(
+    `TermSnap: Screenshot saved to ${uri.fsPath}`,
+  );
 }
 
-async function handleCopy(
-  dataUrl: string,
-  _panel: vscode.WebviewPanel
-): Promise<void> {
+async function handleCopy(dataUrl: string): Promise<void> {
   const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
   const buffer = Buffer.from(base64Data, "base64");
   const tmpFile = join(tmpdir(), `termsnap-${Date.now()}.png`);
@@ -78,24 +80,32 @@ async function handleCopy(
 
     if (process.platform === "darwin") {
       await runCommand(
-        `osascript -e 'set the clipboard to (read (POSIX file "${tmpFile}") as «class PNGf»)'`
+        `osascript -e 'set the clipboard to (read (POSIX file "${tmpFile}") as «class PNGf»)'`,
       );
     } else if (process.platform === "linux") {
-      await runCommand(`xclip -selection clipboard -t image/png -i "${tmpFile}"`);
+      await runCommand(
+        `xclip -selection clipboard -t image/png -i "${tmpFile}"`,
+      );
     } else {
       // Windows: use PowerShell
       await runCommand(
-        `powershell -command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::SetImage([System.Drawing.Image]::FromFile('${tmpFile}'))"`
+        `powershell -command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::SetImage([System.Drawing.Image]::FromFile('${tmpFile}'))"`,
       );
     }
 
-    vscode.window.showInformationMessage("TermSnap: Screenshot copied to clipboard!");
+    vscode.window.showInformationMessage(
+      "TermSnap: Screenshot copied to clipboard!",
+    );
   } catch (err) {
     vscode.window.showErrorMessage(
-      `TermSnap: Failed to copy image to clipboard. ${err}`
+      `TermSnap: Failed to copy image to clipboard. ${err}`,
     );
   } finally {
-    try { unlinkSync(tmpFile); } catch {}
+    try {
+      unlinkSync(tmpFile);
+    } catch (error) {
+      console.warn("TermSnap: Failed to remove temporary image:", error);
+    }
   }
 }
 
@@ -113,7 +123,7 @@ function runCommand(cmd: string): Promise<void> {
 
 async function handleSettingsChanged(
   key: string,
-  value: unknown
+  value: unknown,
 ): Promise<void> {
   await updateConfig(key, value);
 }

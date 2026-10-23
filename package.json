@@ -1,14 +1,17 @@
 {
-  "name": "termsnap",
-  "displayName": "TermSnap",
-  "description": "Capture beautiful terminal screenshots",
-  "version": "0.0.4",
+  "name": "termsnap-textwrap",
+  "displayName": "TermSnap TextWrap",
+  "description": "Capture beautiful terminal screenshots with adjustable text wrapping, preserved terminal colors, and customizable themes.",
+  "version": "0.1.0",
   "publisher": "RunningOffCaffeine",
   "icon": "media/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/RunningOffCaffeine/termsnap-textwrap"
+  },
+  "bugs": {
+    "url": "https://github.com/RunningOffCaffeine/termsnap-textwrap/issues"
   },
   "keywords": [
     "terminal",
@@ -97,6 +100,11 @@
           "maximum": 64,
           "description": "Padding inside the terminal window"
         },
+        "termsnap.preserveTerminalColors": {
+          "type": "boolean",
+          "default": true,
+          "description": "Preserve colors and text styling from VS Code's Terminal: Copy Selection as HTML when the system clipboard supports text/html. Requires wl-paste on Linux Wayland or xclip on X11; otherwise falls back to plain text."
+        },
         "termsnap.wrapText": {
           "type": "boolean",
           "default": false,
@@ -146,18 +154,25 @@
     "vscode:prepublish": "npm run build",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "esbuild": "^0.28.2",
-    "typescript": "^5.3.0"
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "typescript": "^5.3.0",
+    "typescript-eslint": "^8.72.0"
   },
   "dependencies": {
     "html-to-image": "^1.11.11"
   },
   "allowScripts": {
-    "esbuild@0.20.2": true
+    "esbuild@0.28.2": true
   }
 }

@@ -247,6 +247,19 @@ body {
   overflow-x: visible;
 }
 
+/* Colored output stays line-oriented, including when line numbers are off. */
+.terminal-colored-line {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+}
+
+.terminal-body pre.wrap-enabled .terminal-colored-line {
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* ── Line Numbers ────────────────────────────────────── */
 
 .terminal-line {

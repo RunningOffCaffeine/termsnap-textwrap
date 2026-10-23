@@ -5,6 +5,7 @@ export interface TermSnapConfig {
   fontSize: number;
   padding: number;
   wrapText: boolean;
+  preserveTerminalColors: boolean;
   wrapWidth: number;
   showWindowControls: boolean;
   showLineNumbers: boolean;
@@ -21,6 +22,7 @@ export function getConfig(): TermSnapConfig {
     fontSize: config.get<number>("fontSize", 14),
     padding: config.get<number>("padding", 16),
     wrapText: config.get<boolean>("wrapText", false),
+    preserveTerminalColors: config.get<boolean>("preserveTerminalColors", true),
     wrapWidth: config.get<number>("wrapWidth", 800),
     showWindowControls: config.get<boolean>("showWindowControls", true),
     showLineNumbers: config.get<boolean>("showLineNumbers", false),

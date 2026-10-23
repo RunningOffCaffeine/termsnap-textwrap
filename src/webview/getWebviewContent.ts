@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
 import { TermSnapConfig } from "../config";
+import { CapturedTerminal } from "../captureTerminal";
 
 export function getWebviewContent(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
-  terminalText: string,
+  capture: CapturedTerminal,
   config: TermSnapConfig,
 ): string {
   const stylesUri = webview.asWebviewUri(
@@ -25,7 +26,7 @@ export function getWebviewContent(
   const nonce = getNonce();
 
   // Escape HTML entities in terminal text
-  const escapedText = terminalText
+  const escapedText = capture.text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -67,6 +68,12 @@ export function getWebviewContent(
     <div class="toolbar-group">
       <label for="padding">Padding: <span id="padding-value">${config.padding}</span>px</label>
       <input type="range" id="padding" min="0" max="64" value="${config.padding}">
+    </div>
+    <div class="toolbar-group">
+      <label>
+        <input type="checkbox" id="terminal-colors" ${config.preserveTerminalColors && capture.html ? "checked" : ""} ${capture.html ? "" : "disabled"} title="${capture.html ? "Use colors captured from VS Code terminal HTML" : "No formatted terminal HTML available for this capture"}">
+        Terminal Colors
+      </label>
     </div>
     <div class="toolbar-group">
       <label>
@@ -124,7 +131,7 @@ export function getWebviewContent(
   <script nonce="${nonce}" src="${htmlToImageUri}"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
   <script nonce="${nonce}">
-    initTermSnap(${JSON.stringify({ config }).replace(/</g, "\\u003c")});
+    window.initTermSnap(${JSON.stringify({ config, html: capture.html ?? null }).replace(/</g, "\\u003c")});
   </script>
 </body>
 </html>`;

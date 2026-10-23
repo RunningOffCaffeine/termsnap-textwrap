@@ -37,7 +37,7 @@ Capture beautiful, Carbon-style screenshots of your terminal output — directly
 2. Run your commands
 3. **Select the terminal text** you want to capture
 4. Press `Cmd+Shift+S` (Mac) / `Ctrl+Shift+S` (Windows/Linux)
-5. The TermSnap preview panel opens — adjust theme and settings as needed; optionally enable **Wrap Text** and set **Width (px)** or drag the right-side resize grip (arrow keys also work when the grip is focused)
+5. The TermSnap preview panel opens — adjust theme and settings as needed; switch **Terminal Colors** on or off if HTML capture is available; optionally enable **Wrap Text** and set **Width (px)** or drag the right-side resize grip (arrow keys also work when the grip is focused)
 6. Click **Save as PNG**, **Copy Image**, or **Copy Text**
 
 You can also open the command palette (`Cmd+Shift+P`) and search for **"TermSnap: Capture Terminal Screenshot"**.
@@ -62,19 +62,20 @@ You can also open the command palette (`Cmd+Shift+P`) and search for **"TermSnap
 
 ## Settings
 
-| Setting                        | Default     | Description                                                                                           |
-| ------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------- |
-| `termsnap.backgroundColor`     | `#1e1e2e`   | Outer background color                                                                                |
-| `termsnap.customBackground`    | `#1e1e2e`   | Custom theme: background                                                                              |
-| `termsnap.customTextColor`     | `#f8f8f2`   | Custom theme: text color                                                                              |
-| `termsnap.customTitleBarColor` | `#161616`   | Custom theme: title bar                                                                               |
-| `termsnap.fontSize`            | `14`        | Font size (10–24px)                                                                                   |
-| `termsnap.padding`             | `16`        | Inner padding (0–64px)                                                                                |
-| `termsnap.showLineNumbers`     | `false`     | Show line numbers                                                                                     |
-| `termsnap.showWindowControls`  | `true`      | Show macOS-style dots                                                                                 |
-| `termsnap.theme`               | `andromeda` | Screenshot theme                                                                                      |
-| `termsnap.wrapText`            | `false`     | Enable word wrapping for long terminal lines                                                          |
-| `termsnap.wrapWidth`           | `800`       | Width of the terminal window (240–2400px) when wrapping is enabled; excludes outer background padding |
+| Setting                           | Default     | Description                                                                                           |
+| --------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------- |
+| `termsnap.backgroundColor`        | `#1e1e2e`   | Outer background color                                                                                |
+| `termsnap.customBackground`       | `#1e1e2e`   | Custom theme: background                                                                              |
+| `termsnap.customTextColor`        | `#f8f8f2`   | Custom theme: text color                                                                              |
+| `termsnap.customTitleBarColor`    | `#161616`   | Custom theme: title bar                                                                               |
+| `termsnap.fontSize`               | `14`        | Font size (10–24px)                                                                                   |
+| `termsnap.padding`                | `16`        | Inner padding (0–64px)                                                                                |
+| `termsnap.showLineNumbers`        | `false`     | Show line numbers                                                                                     |
+| `termsnap.showWindowControls`     | `true`      | Show macOS-style dots                                                                                 |
+| `termsnap.theme`                  | `andromeda` | Screenshot theme                                                                                      |
+| `termsnap.wrapText`               | `false`     | Enable word wrapping for long terminal lines                                                          |
+| `termsnap.wrapWidth`              | `800`       | Width of the terminal window (240–2400px) when wrapping is enabled; excludes outer background padding |
+| `termsnap.preserveTerminalColors` | `true`      | Capture and display colors from terminal HTML when supported (Linux `wl-paste` or `xclip`)            |
 
 ## Wrapping and Resizing
 
@@ -88,6 +89,22 @@ Wrapping is **off by default** to preserve terminal tables and ASCII art. Check 
 ```
 
 You can type a width in pixels or drag the resize grip on the right of the preview. Width changes are reflected immediately and saved to VS Code settings when committed. The grip is not included in the generated PNG. When line numbers are enabled, wrapped continuation lines remain indented under their associated text. **Copy Text** still copies the original, unwrapped terminal selection. Note that automatic wrapping can break the visual alignment of terminal tables and diagrams, so switch wrapping off for those captures.
+
++## Preserving Terminal Colors
+
+- +TermSnap can use VS Code's built-in **Terminal: Copy Selection as HTML** command to capture each colored text run, then copy the plain selection separately for the **Copy Text** button. The screenshot preview and PNG export retain the selected terminal's foreground/background colors, bold/italic/underline, etc.; your selected TermSnap theme still controls the window background and title bar.
+
+```json
+{
+  "termsnap.preserveTerminalColors": true
+}
+```
+
+**Linux desktop requirement:** the extension's host process needs access to the system clipboard HTML MIME type. On Wayland, provide `wl-paste` from the `wl-clipboard` package; on X11, provide `xclip` on the `PATH`. A Wayland session may also fall back to the XWayland clipboard bridge (`xclip`). For instance, check with `wl-paste --list-types` after running VS Code's **Terminal: Copy Selection as HTML** command. The result should include `text/html`.
+
+On Windows, macOS, SSH/Dev Containers, or sandboxed VS Code installations where the extension host cannot read the local desktop HTML clipboard, the extension falls back to its existing plain-text rendering. The **Terminal Colors** checkbox is disabled if no valid HTML is available for that capture. This feature only preserves existing terminal colors—it does not invent ANSI highlighting for uncolored text. Do not paste arbitrary clipboard HTML into the preview; TermSnap parses and reconstructs allowlisted styles only.
+
+**Note:** The terminal's original plain-text selection is copied to the system clipboard when you capture, just as before. Colorized output is preserved inside the preview and PNG, not in the **Copy Text** action.
 
 ## Custom Theme
 
@@ -104,7 +121,7 @@ Set the theme to `custom` and configure your colors in VS Code settings:
 
 ## How It Works
 
-VS Code's extension API does not expose terminal buffer access. TermSnap uses a clipboard-based approach: when you trigger a capture, it copies your terminal selection and renders it as a styled image in a webview panel. ANSI colors are not preserved on clipboard copy, so TermSnap applies clean monochrome terminal themes instead. Text layout (tables, ASCII art, alignment) is fully preserved.
+VS Code's extension API does not expose terminal buffer access. TermSnap uses VS Code's terminal copy commands, optionally reads the desktop's HTML clipboard flavor, and safely reconstructs terminal color runs in the preview. If formatted capture is unavailable, a plain-text screenshot still works. Text layout (tables, ASCII art, alignment) remains preserved when wrapping is disabled.
 
 ## License
 
