@@ -17,7 +17,7 @@ export interface TermSnapConfig {
 export function getConfig(): TermSnapConfig {
   const config = vscode.workspace.getConfiguration("termsnap");
   return {
-    theme: config.get<string>("theme", "dracula"),
+    theme: config.get<string>("theme", "andromeda"),
     fontSize: config.get<number>("fontSize", 14),
     padding: config.get<number>("padding", 16),
     wrapText: config.get<boolean>("wrapText", false),
@@ -31,10 +31,7 @@ export function getConfig(): TermSnapConfig {
   };
 }
 
-export async function updateConfig(
-  key: string,
-  value: unknown
-): Promise<void> {
+export async function updateConfig(key: string, value: unknown): Promise<void> {
   const config = vscode.workspace.getConfiguration("termsnap");
   await config.update(key, value, vscode.ConfigurationTarget.Global);
 }

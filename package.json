@@ -2,13 +2,13 @@
   "name": "termsnap",
   "displayName": "TermSnap",
   "description": "Capture beautiful terminal screenshots",
-  "version": "0.0.3",
-  "publisher": "kushakjafry",
+  "version": "0.0.4",
+  "publisher": "RunningOffCaffeine",
   "icon": "media/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kushakjafry/termsnap"
+    "url": "https://github.com/RunningOffCaffeine/termsnap-textwrap"
   },
   "keywords": [
     "terminal",
@@ -50,8 +50,9 @@
       "properties": {
         "termsnap.theme": {
           "type": "string",
-          "default": "dracula",
+          "default": "andromeda",
           "enum": [
+            "andromeda",
             "dracula",
             "one-dark",
             "monokai",
@@ -66,6 +67,7 @@
             "custom"
           ],
           "enumDescriptions": [
+            "Andromeda theme",
             "Dracula theme",
             "One Dark theme",
             "Monokai theme",
@@ -149,10 +151,13 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
-    "esbuild": "^0.20.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.3.0"
   },
   "dependencies": {
     "html-to-image": "^1.11.11"
+  },
+  "allowScripts": {
+    "esbuild@0.20.2": true
   }
 }

@@ -5,21 +5,21 @@ export function getWebviewContent(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   terminalText: string,
-  config: TermSnapConfig
+  config: TermSnapConfig,
 ): string {
   const stylesUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, "media", "webview", "styles.css")
+    vscode.Uri.joinPath(extensionUri, "media", "webview", "styles.css"),
   );
   const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, "media", "webview", "script.js")
+    vscode.Uri.joinPath(extensionUri, "media", "webview", "script.js"),
   );
   const htmlToImageUri = webview.asWebviewUri(
     vscode.Uri.joinPath(
       extensionUri,
       "media",
       "webview",
-      "html-to-image.min.js"
-    )
+      "html-to-image.min.js",
+    ),
   );
 
   const nonce = getNonce();
@@ -45,6 +45,7 @@ export function getWebviewContent(
     <div class="toolbar-group">
       <label for="theme-select">Theme</label>
       <select id="theme-select">
+        <option value="andromeda" ${config.theme === "andromeda" ? "selected" : ""}>Andromeda</option>
         <option value="dracula" ${config.theme === "dracula" ? "selected" : ""}>Dracula</option>
         <option value="one-dark" ${config.theme === "one-dark" ? "selected" : ""}>One Dark</option>
         <option value="monokai" ${config.theme === "monokai" ? "selected" : ""}>Monokai</option>
