@@ -4,7 +4,7 @@
   "description": "Capture beautiful terminal screenshots with adjustable text wrapping, preserved terminal colors, and customizable themes.",
   "version": "0.1.1",
   "publisher": "RunningOffCaffeine",
-  "icon": "media/icon.png",
+  "icon": "media/icon-tw.png",
   "license": "MIT",
   "repository": {
     "type": "git",

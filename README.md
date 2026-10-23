@@ -2,7 +2,7 @@
 
 Capture beautiful, Carbon-style screenshots of your terminal output — directly from VS Code.
 
-![TermSnap-TextWrap Preview](https://github.com/RunningOffCaffeine/termsnap-textwrap/blob/main/media/demo.png)
+![TermSnap-TextWrap Preview](https://github.com/RunningOffCaffeine/termsnap-textwrap/blob/main/media/demo-tw.png)
 
 ## Why TermSnap-TextWrap?
 
