@@ -43,7 +43,7 @@ export async function handleMessage(message: WebviewMessage): Promise<void> {
     case "copyText":
       await vscode.env.clipboard.writeText(message.text);
       vscode.window.showInformationMessage(
-        "TermSnap: Text copied to clipboard!",
+        "TermSnap-TextWrap: Text copied to clipboard!",
       );
       break;
     case "settingsChanged":
@@ -54,7 +54,7 @@ export async function handleMessage(message: WebviewMessage): Promise<void> {
 
 async function handleSave(dataUrl: string): Promise<void> {
   const uri = await vscode.window.showSaveDialog({
-    defaultUri: vscode.Uri.file("termsnap.png"),
+    defaultUri: vscode.Uri.file("termsnap-textwrap.png"),
     filters: { "PNG Image": ["png"] },
   });
 
@@ -66,14 +66,14 @@ async function handleSave(dataUrl: string): Promise<void> {
   const buffer = Buffer.from(base64Data, "base64");
   await vscode.workspace.fs.writeFile(uri, buffer);
   vscode.window.showInformationMessage(
-    `TermSnap: Screenshot saved to ${uri.fsPath}`,
+    `TermSnap-TextWrap: Screenshot saved to ${uri.fsPath}`,
   );
 }
 
 async function handleCopy(dataUrl: string): Promise<void> {
   const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
   const buffer = Buffer.from(base64Data, "base64");
-  const tmpFile = join(tmpdir(), `termsnap-${Date.now()}.png`);
+  const tmpFile = join(tmpdir(), `termsnap-textwrap-${Date.now()}.png`);
 
   try {
     writeFileSync(tmpFile, buffer);
@@ -94,17 +94,20 @@ async function handleCopy(dataUrl: string): Promise<void> {
     }
 
     vscode.window.showInformationMessage(
-      "TermSnap: Screenshot copied to clipboard!",
+      "TermSnap-TextWrap: Screenshot copied to clipboard!",
     );
   } catch (err) {
     vscode.window.showErrorMessage(
-      `TermSnap: Failed to copy image to clipboard. ${err}`,
+      `TermSnap-TextWrap: Failed to copy image to clipboard. ${err}`,
     );
   } finally {
     try {
       unlinkSync(tmpFile);
     } catch (error) {
-      console.warn("TermSnap: Failed to remove temporary image:", error);
+      console.warn(
+        "TermSnap-TextWrap: Failed to remove temporary image:",
+        error,
+      );
     }
   }
 }

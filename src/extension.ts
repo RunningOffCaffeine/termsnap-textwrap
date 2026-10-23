@@ -4,7 +4,7 @@ import { createOrShowPanel } from "./webview/webviewPanel";
 
 export function activate(context: vscode.ExtensionContext) {
   const captureCommand = vscode.commands.registerCommand(
-    "termsnap.capture",
+    "termsnap-textwrap.capture",
     async () => {
       const capture = await captureTerminalSelection();
       if (!capture) {

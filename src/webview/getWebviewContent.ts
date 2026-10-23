@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
-import { TermSnapConfig } from "../config";
+import { TermSnapTextWrapConfig } from "../config";
 import { CapturedTerminal } from "../captureTerminal";
 
 export function getWebviewContent(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   capture: CapturedTerminal,
-  config: TermSnapConfig,
+  config: TermSnapTextWrapConfig,
 ): string {
   const stylesUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "media", "webview", "styles.css"),
@@ -39,7 +39,7 @@ export function getWebviewContent(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} data:;">
   <link href="${stylesUri}" rel="stylesheet">
-  <title>TermSnap Preview</title>
+  <title>TermSnap-TextWrap Preview</title>
 </head>
 <body>
   <div class="toolbar">
@@ -131,7 +131,7 @@ export function getWebviewContent(
   <script nonce="${nonce}" src="${htmlToImageUri}"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
   <script nonce="${nonce}">
-    window.initTermSnap(${JSON.stringify({ config, html: capture.html ?? null }).replace(/</g, "\\u003c")});
+    window.initTermSnapTextWrap(${JSON.stringify({ config, html: capture.html ?? null }).replace(/</g, "\\u003c")});
   </script>
 </body>
 </html>`;

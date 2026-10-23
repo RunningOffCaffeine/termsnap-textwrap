@@ -2,7 +2,7 @@
   "name": "termsnap-textwrap",
   "displayName": "TermSnap TextWrap",
   "description": "Capture beautiful terminal screenshots with adjustable text wrapping, preserved terminal colors, and customizable themes.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "RunningOffCaffeine",
   "icon": "media/icon.png",
   "license": "MIT",
@@ -36,20 +36,20 @@
   "contributes": {
     "commands": [
       {
-        "command": "termsnap.capture",
+        "command": "termsnap-textwrap.capture",
         "title": "TermSnap: Capture Terminal Screenshot"
       }
     ],
     "keybindings": [
       {
-        "command": "termsnap.capture",
+        "command": "termsnap-textwrap.capture",
         "key": "ctrl+shift+s",
         "mac": "cmd+shift+s",
         "when": "terminalFocus && terminalHasBeenCreated"
       }
     ],
     "configuration": {
-      "title": "TermSnap",
+      "title": "TermSnap TextWrap",
       "properties": {
         "termsnap.theme": {
           "type": "string",
@@ -163,6 +163,7 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
@@ -173,6 +174,7 @@
     "html-to-image": "^1.11.11"
   },
   "allowScripts": {
-    "esbuild@0.28.2": true
+    "esbuild@0.28.2": true,
+    "@vscode/vsce@4.0.0": true
   }
 }

@@ -24,8 +24,8 @@ export function createOrShowPanel(
   }
 
   const panel = vscode.window.createWebviewPanel(
-    "termsnap.preview",
-    "TermSnap Preview",
+    "termsnap-textwrap.preview",
+    "TermSnap-TextWrap Preview",
     vscode.ViewColumn.Beside,
     {
       enableScripts: true,

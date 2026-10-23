@@ -1,9 +1,9 @@
 // @ts-nocheck
-/* TermSnap webview script — preview logic, theme switching, export */
+/* TermSnap-TextWrap webview script — preview logic, theme switching, export */
 
 const vscode = acquireVsCodeApi();
 
-window.initTermSnap = (initialData) => {
+window.initTermSnapTextWrap = (initialData) => {
   const { config, html } = initialData;
 
   // DOM elements
@@ -224,7 +224,7 @@ window.initTermSnap = (initialData) => {
 
   // xterm's HTML serializer emits a global <div> with a hard-coded default
   // background and a child <div> per terminal line, containing styled spans.
-  // Deliberately skip global styles so the selected TermSnap theme remains
+  // Deliberately skip global styles so the selected TermSnap-TextWrap theme remains
   // the terminal background; only use explicit foreground/background runs.
   function parseTerminalHtml(markup) {
     if (typeof markup !== "string" || !markup) return null;
@@ -378,7 +378,7 @@ window.initTermSnap = (initialData) => {
       });
       vscode.postMessage({ type: "save", dataUrl });
     } catch (err) {
-      console.error("TermSnap export error:", err);
+      console.error("TermSnap-TextWrap export error:", err);
     } finally {
       btnSave.disabled = false;
       btnSave.textContent = "Save as PNG";
@@ -404,14 +404,14 @@ window.initTermSnap = (initialData) => {
       vscode.postMessage({ type: "copy", dataUrl });
     } catch (err) {
       // Fallback: send to extension for handling
-      console.error("TermSnap clipboard error:", err);
+      console.error("TermSnap-TextWrap clipboard error:", err);
       try {
         const dataUrl = await htmlToImage.toPng(captureArea, {
           pixelRatio: 4,
         });
         vscode.postMessage({ type: "copy", dataUrl });
       } catch (e) {
-        console.error("TermSnap fallback error:", e);
+        console.error("TermSnap-TextWrap fallback error:", e);
       }
     } finally {
       btnCopy.disabled = false;

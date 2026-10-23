@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-export interface TermSnapConfig {
+export interface TermSnapTextWrapConfig {
   theme: string;
   fontSize: number;
   padding: number;
@@ -15,8 +15,8 @@ export interface TermSnapConfig {
   customTitleBarColor: string;
 }
 
-export function getConfig(): TermSnapConfig {
-  const config = vscode.workspace.getConfiguration("termsnap");
+export function getConfig(): TermSnapTextWrapConfig {
+  const config = vscode.workspace.getConfiguration("termsnap-textwrap");
   return {
     theme: config.get<string>("theme", "andromeda"),
     fontSize: config.get<number>("fontSize", 14),
@@ -34,6 +34,6 @@ export function getConfig(): TermSnapConfig {
 }
 
 export async function updateConfig(key: string, value: unknown): Promise<void> {
-  const config = vscode.workspace.getConfiguration("termsnap");
+  const config = vscode.workspace.getConfiguration("termsnap-textwrap");
   await config.update(key, value, vscode.ConfigurationTarget.Global);
 }

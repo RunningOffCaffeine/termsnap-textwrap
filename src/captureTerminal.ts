@@ -97,7 +97,7 @@ export async function captureTerminalSelection(): Promise<
     );
   } catch {
     vscode.window.showErrorMessage(
-      "TermSnap: Could not copy the terminal selection.",
+      "TermSnap-TextWrap: Could not copy the terminal selection.",
     );
     return undefined;
   }
@@ -107,14 +107,14 @@ export async function captureTerminalSelection(): Promise<
 
   if (!text || text.trim().length === 0) {
     vscode.window.showErrorMessage(
-      "TermSnap: No terminal text selected. Select text in the terminal first.",
+      "TermSnap-TextWrap: No terminal text selected. Select text in the terminal first.",
     );
     return undefined;
   }
 
   if (preserveColors && !html) {
     vscode.window.showWarningMessage(
-      "TermSnap: Terminal colors unavailable. Install wl-clipboard (Wayland) or xclip (X11) and run VS Code locally; capturing plain text instead.",
+      "TermSnap-TextWrap: Terminal colors unavailable. Install wl-clipboard (Wayland) or xclip (X11) and run VS Code locally; capturing plain text instead.",
     );
   }
   return { text, html };
