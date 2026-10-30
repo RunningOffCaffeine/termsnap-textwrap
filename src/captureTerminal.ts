@@ -24,28 +24,13 @@ async function readClipboardHtml(): Promise<string | undefined> {
     return undefined;
   }
 
-  const readers: [string, string[]][] = [];
-  if (
-    process.env.WAYLAND_DISPLAY ||
-    process.env.XDG_SESSION_TYPE === "wayland"
-  ) {
-    readers.push(["wl-paste", ["--no-newline", "--type", "text/html"]]);
-  }
-  // XWayland clipboard bridge is often available even on Wayland.
-  if (process.env.DISPLAY) {
-    readers.push([
-      "xclip",
-      ["-selection", "clipboard", "-out", "-t", "text/html"],
-    ]);
-  }
-  if (!readers.length) {
-    // e.g. a local environment with an unusual session configuration
-    readers.push(["wl-paste", ["--no-newline", "--type", "text/html"]]);
-    readers.push([
-      "xclip",
-      ["-selection", "clipboard", "-out", "-t", "text/html"],
-    ]);
-  }
+  // Try Wayland first, then X11/XWayland as a fallback.
+  // Do not rely on environment variables, as they may be
+  // missing or different when running in VS Code Dev Containers.
+  const readers: [string, string[]][] = [
+    ["wl-paste", ["--no-newline", "--type", "text/html"]],
+    ["xclip", ["-selection", "clipboard", "-out", "-t", "text/html"]],
+  ];
 
   for (const [command, args] of readers) {
     try {
@@ -55,15 +40,20 @@ async function readClipboardHtml(): Promise<string | undefined> {
         maxBuffer: MAX_HTML_BYTES,
         windowsHide: true,
       });
-      // Reject stale/incompatible clipboard content. The HTML produced by
-      // VS Code's xterm.js serialize addon contains a <pre> element.
+
+      // Reject stale or incompatible clipboard content.
+      // VS Code's xterm.js HTML export contains a <pre> element.
       if (/<pre(?:\s|>)/i.test(stdout) && /<\/pre\s*>/i.test(stdout)) {
         return stdout;
       }
     } catch {
-      // Missing utility, no HTML MIME type, or no clipboard access.
+      // Missing utility, unsupported HTML MIME type,
+      // clipboard unavailable, or command timeout.
+      // Try the next reader.
     }
   }
+
+  // HTML unavailable; allow plain-text capture as fallback.
   return undefined;
 }
 

@@ -33,25 +33,81 @@ window.initTermSnapTextWrap = (initialData) => {
 
   // Store the raw text (unescaped) for line-number toggling
   let rawText = terminalText.textContent;
-  // Parse xterm's clipboard HTML in an inert document, then reconstruct ONLY
-  // plain text and allowlisted inline styles. Never insert raw clipboard HTML.
-  const formattedLines = parseTerminalHtml(html);
-  // Detect an unrelated/stale text/html clipboard flavor before applying it.
-  // Terminal serialization can retain right-hand padding, so ignore trailing
-  // spaces for this comparison but never change the copied plain text.
-  const normalizeForMatch = (value) =>
+  // Parse the terminal HTML without inserting unsafe clipboard HTML.
+  const capturedLines = parseTerminalHtml(html);
+
+  // VS Code's HTML and plain-text serializers can disagree on
+  // whitespace, Nerd Font glyphs, and terminal line wrapping.
+  // Validate individual lines instead of rejecting all colors.
+  const plainLines = rawText.replace(/\r\n/g, "\n").split("\n");
+
+  const matchKey = (value) =>
     value
-      .replace(/\r\n/g, "\n")
-      .replace(/[ \t]+$/gm, "")
-      .replace(/\n+$/, "");
-  const formattedText =
-    formattedLines ?
-      formattedLines.map((line) => line.textContent).join("\n")
-    : "";
-  if (
-    !formattedLines ||
-    normalizeForMatch(formattedText) !== normalizeForMatch(rawText)
-  ) {
+      .normalize("NFC")
+      .replace(/\u00a0/g, " ")
+      .replace(/[\u200b-\u200d\ufeff]/g, "")
+      .replace(/[ \t]+$/g, "");
+
+  const htmlKeys =
+    capturedLines ?
+      capturedLines.map((line) => matchKey(line.textContent || ""))
+    : [];
+
+  let htmlIndex = 0;
+  let matchedChars = 0;
+
+  const alignedLines = plainLines.map((plain, i) => {
+    const key = matchKey(plain);
+    let match = -1;
+
+    // Search a few rows ahead to accommodate extra HTML rows.
+    if (key) {
+      for (let offset = 0; offset <= 2; offset++) {
+        const index = htmlIndex + offset;
+
+        if (index < htmlKeys.length && htmlKeys[index] === key) {
+          match = index;
+          break;
+        }
+      }
+    }
+
+    if (match >= 0 && capturedLines) {
+      htmlIndex = match + 1;
+      matchedChars += key.length;
+      return capturedLines[match];
+    }
+
+    // If this line differs, retain its original plain text.
+    // Other matching lines can still keep their colors.
+    const fallback = document.createDocumentFragment();
+    fallback.appendChild(document.createTextNode(plain));
+
+    const nextKey =
+      i + 1 < plainLines.length ? matchKey(plainLines[i + 1]) : "";
+
+    if (
+      htmlIndex < htmlKeys.length &&
+      (!nextKey || htmlKeys[htmlIndex] !== nextKey)
+    ) {
+      htmlIndex++;
+    }
+
+    return fallback;
+  });
+
+  // Require enough matching text to reject unrelated clipboard HTML.
+  const totalChars = plainLines.reduce(
+    (sum, line) => sum + matchKey(line).length,
+    0,
+  );
+
+  const formattedLines =
+    capturedLines && matchedChars > 0 && matchedChars >= totalChars * 0.5 ?
+      alignedLines
+    : null;
+
+  if (!formattedLines) {
     terminalColorsCheckbox.checked = false;
     terminalColorsCheckbox.disabled = true;
   }
