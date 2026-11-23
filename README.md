@@ -2,9 +2,23 @@
 
 Capture beautiful, Carbon-style screenshots of your terminal output — directly from VS Code.
 
-## Terminal capture
+## Screenshot Preview
 
 ![TermSnap TextWrap Preview](https://raw.githubusercontent.com/RunningOffCaffeine/termsnap-textwrap/main/media/demo-ascii.png)
+
+## What's New in v0.2.0
+
+**v0.2.0 focuses on faster PNG exports and more reliable large screenshots** compared with v0.1.5. The existing text wrapping, terminal color preservation, Andromeda theme, and Dev Container support are retained.
+
+- **Faster rendering engine** — A new stylesheet-based renderer captures styled terminal output without recomputing styles for every character. The previous `html-to-image` renderer remains as a fallback if needed.
+- **Large-output exports** — Tall screenshots are rendered in smaller tiles and combined into one full-resolution PNG, avoiding single-canvas height limits and unwanted downscaling.
+- **Adjustable PNG scale** — Choose **1×, 2×, 3×, or 4×** in the preview. The new **2× default** balances clarity and export speed, and your choice is saved in VS Code settings.
+- **Faster Save PNG workflow** — The file picker opens while the screenshot renders, rather than making you wait for rendering to finish first.
+- **One render per unchanged preview** — Save PNG and Copy Image reuse the same rendered image until content or appearance settings change, avoiding duplicate work.
+- **Improved Linux image copying** — When the webview clipboard API is unavailable, Copy Image can fall back to the host's `wl-copy` (Wayland) or `xclip` (X11). This does not require clipboard tools inside each Dev Container when TermSnap runs locally as a UI extension.
+- **Settings compatibility fix** — The extension now consistently saves settings under `termsnap.*` while continuing to read older `termsnap-textwrap.*` values as a fallback.
+
+For usage details, see [Fast PNG Rendering](#fast-png-rendering) and [Preserving Terminal Colors](#preserving-terminal-colors).
 
 ## Why TermSnap-TextWrap?
 
