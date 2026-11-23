@@ -5,7 +5,7 @@
     "ui"
   ],
   "description": "Capture beautiful terminal screenshots with adjustable text wrapping, preserved terminal colors, and customizable themes.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "RunningOffCaffeine",
   "icon": "media/icon-tw.png",
   "license": "MIT",

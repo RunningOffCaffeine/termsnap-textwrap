@@ -95,7 +95,10 @@ export async function captureTerminalSelection(): Promise<
   await new Promise((resolve) => setTimeout(resolve, 100));
   const text = await vscode.env.clipboard.readText();
 
-  if (!text || text.trim().length === 0) {
+  // A selection made entirely of background-colored spaces has no visible
+  // text, but its HTML still contains real terminal formatting. Allow it when
+  // an HTML capture is available; reject an empty or plain whitespace capture.
+  if (!text || (text.trim().length === 0 && !html)) {
     vscode.window.showErrorMessage(
       "TermSnap-TextWrap: No terminal text selected. Select text in the terminal first.",
     );

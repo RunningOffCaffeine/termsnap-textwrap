@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# TermSnap TextWrap - colorful ASCII demo (no dependencies).
-# Output uses 24-bit ANSI foreground/background colors.
+# TermSnap TextWrap - colorful ANSI/RGB demo (no external dependencies).
+# Shows both RGB foreground blocks and RGB background-colored spaces.
+# Requires a TermSnap build that preserves whitespace-only HTML color rows.
 
 RESET=$'\033[0m'
 BOLD=$'\033[1m'
-DIM=$'\033[2m'
 CYAN=$'\033[38;2;0;232;198m'
 PURPLE=$'\033[38;2;199;77;237m'
-PINK=$'\033[38;2;255;97;136m'
+CORAL=$'\033[38;2;255;97;136m'
 GREEN=$'\033[38;2;150;224;114m'
 YELLOW=$'\033[38;2;255;230;109m'
 MUTED=$'\033[38;2;143;147;162m'
 FG=$'\033[38;2;213;206;217m'
 
-# Print a cyan -> purple gradient across one ASCII-art line.
+# Print a cyan-to-purple gradient across each ASCII-art line.
 print_gradient() {
   local line=$1 i width=${#1} r g b
   for ((i = 0; i < width; i += 4)); do
@@ -25,7 +25,6 @@ print_gradient() {
   printf '%s\n' "$RESET"
 }
 
-printf '\n'
 while IFS= read -r line; do
   print_gradient "$line"
 done <<'ART'
@@ -47,20 +46,51 @@ printf '  %s[3/3]%s Preparing PNG renderer\n' "$PURPLE" "$RESET"
 printf '  %s[PASS]%s Build completed successfully\n\n' "$GREEN" "$RESET"
 
 printf '  %s%sCOLOR PALETTE%s\n' "$BOLD" "$PURPLE" "$RESET"
+
+# Every palette cell is 12 columns wide: 2 margin + 8 swatch + 2 margin.
+# The first row uses ANSI BACKGROUND colors on ordinary space characters.
+# The second uses ANSI FOREGROUND colors on solid block characters.
+PALETTE_NAMES=(CYAN GREEN YELLOW CORAL PURPLE)
+PALETTE_COLORS=("$CYAN" "$GREEN" "$YELLOW" "$CORAL" "$PURPLE")
+PALETTE_BACKGROUNDS=(
+  $'\033[48;2;0;232;198m'
+  $'\033[48;2;150;224;114m'
+  $'\033[48;2;255;230;109m'
+  $'\033[48;2;255;97;136m'
+  $'\033[48;2;199;77;237m'
+)
+
+printf '  %sBackground colors (spaces):%s\n' "$MUTED" "$RESET"
 printf '  '
-for color in '0;232;198' '150;224;114' '255;230;109' '255;97;136' '199;77;237'; do
-  printf '\033[48;2;%sm    %s  ' "$color" "$RESET"
+for bg in "${PALETTE_BACKGROUNDS[@]}"; do
+  printf '  %s        %s  ' "$bg" "$RESET"
 done
 printf '\n'
-printf '  %s CYAN    GREEN   YELLOW  CORAL   PURPLE%s\n\n' "$MUTED" "$RESET"
 
-printf '  %s[INFO]%s    Width: 640 px   |   Scale: 2x   |   Theme: Andromeda\n' "$CYAN" "$RESET"
+printf '  '
+for i in "${!PALETTE_NAMES[@]}"; do
+  label=${PALETTE_NAMES[$i]}
+  color=${PALETTE_COLORS[$i]}
+  left=$(((12 - ${#label}) / 2))
+  right=$((12 - ${#label} - left))
+  printf '%*s%s%s%s%*s' "$left" '' "$color" "$label" "$RESET" "$right" ''
+done
+printf '\n\n'
+
+printf '  %sForeground colors (block characters):%s\n' "$MUTED" "$RESET"
+printf '  '
+for color in "${PALETTE_COLORS[@]}"; do
+  printf '  %s████████%s  ' "$color" "$RESET"
+done
+printf '\n\n'
+
+printf '  %s[INFO]%s    Width: 920 px   |   Scale: 2x   |   Theme: Andromeda\n' "$CYAN" "$RESET"
 printf '  %s[OK]%s      ANSI/RGB colors preserved from the terminal\n' "$GREEN" "$RESET"
 printf '  %s[WARN]%s    This long status message is intentionally verbose so that TermSnap can demonstrate word wrapping without losing its foreground colors or alignment in the exported screenshot.\n' "$YELLOW" "$RESET"
-printf '  %s[DEMO]%s    No real build was run; these are sample diagnostics.\n\n' "$PINK" "$RESET"
+printf '  %s[DEMO]%s    No real build was run; these are sample diagnostics.\n\n' "$CORAL" "$RESET"
 
 printf '  %s%sDIFF PREVIEW%s\n' "$BOLD" "$PURPLE" "$RESET"
-printf '  %s- const pngScale = 4;%s\n' "$PINK" "$RESET"
+printf '  %s- const pngScale = 4;%s\n' "$CORAL" "$RESET"
 printf '  %s+ const pngScale = 2;%s\n' "$GREEN" "$RESET"
 printf '  %s+ const preserveColors = true;%s\n\n' "$GREEN" "$RESET"
-printf '  %s%sReady to capture with TermSnap TextWrap!%s\n\n' "$BOLD" "$CYAN" "$RESET"
+printf '  %s%sReady to capture with TermSnap TextWrap!%s\n' "$BOLD" "$CYAN" "$RESET"

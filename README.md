@@ -2,10 +2,6 @@
 
 Capture beautiful, Carbon-style screenshots of your terminal output — directly from VS Code.
 
-## Screenshot Preview
-
-![TermSnap TextWrap Preview](https://raw.githubusercontent.com/RunningOffCaffeine/termsnap-textwrap/main/media/demo-ascii.png)
-
 ## What's New in v0.2.0
 
 **v0.2.0 focuses on faster PNG exports and more reliable large screenshots** compared with v0.1.5. The existing text wrapping, terminal color preservation, Andromeda theme, and Dev Container support are retained.
@@ -19,6 +15,10 @@ Capture beautiful, Carbon-style screenshots of your terminal output — directly
 - **Settings compatibility fix** — The extension now consistently saves settings under `termsnap.*` while continuing to read older `termsnap-textwrap.*` values as a fallback.
 
 For usage details, see [Fast PNG Rendering](#fast-png-rendering) and [Preserving Terminal Colors](#preserving-terminal-colors).
+
+## Terminal Capture Demo
+
+![TermSnap TextWrap Preview](https://raw.githubusercontent.com/RunningOffCaffeine/termsnap-textwrap/main/media/ascii-demo.png)
 
 ## Why TermSnap-TextWrap?
 
@@ -40,6 +40,7 @@ For usage details, see [Fast PNG Rendering](#fast-png-rendering) and [Preserving
 - **Fast PNG exports** — Stylesheet-based rendering avoids per-character computed-style cloning; tall screenshots are encoded in tiles instead of being downscaled
 - **Adjustable PNG resolution** — Choose 1×, 2×, 3×, or 4× in the preview (defaults to 2×)
 - **Export options** — Save as PNG (dialog opens while rendering), copy image to clipboard, or copy raw text
+- **Preserves ANSI foreground and background colors** — Colored text and background-painted spaces (such as CLI color palettes) are retained when VS Code includes them in its HTML clipboard data
 - **Preserves layout** — Wrapping is off by default so tables, ASCII art, box-drawing characters, and alignment remain intact
 
 ## Works great for
@@ -121,7 +122,7 @@ You can type a width in pixels or drag the resize grip on the right of the previ
 
 **Linux desktop requirement:** the extension's host process needs access to the system clipboard HTML MIME type. On Wayland, provide `wl-paste` from the `wl-clipboard` package; on X11, provide `xclip` on the `PATH`. A Wayland session may also fall back to the XWayland clipboard bridge (`xclip`). For instance, check with `wl-paste --list-types` after running VS Code's **Terminal: Copy Selection as HTML** command. The result should include `text/html`.
 
-On Windows, macOS, or sandboxed VS Code installations where the extension host cannot read the local desktop HTML clipboard, the extension falls back to its existing plain-text rendering. In a Dev Container, TermSnap TextWrap normally runs as a local UI extension on the Bazzite desktop and can preserve terminal colors with host `wl-paste`. The **Terminal Colors** checkbox is disabled if no valid HTML is available for that capture. This feature only preserves existing terminal colors—it does not invent ANSI highlighting for uncolored text. Do not paste arbitrary clipboard HTML into the preview; TermSnap-TextWrap parses and reconstructs allowlisted styles only.
+On Windows, macOS, or sandboxed VS Code installations where the extension host cannot read the local desktop HTML clipboard, the extension falls back to its existing plain-text rendering. In a Dev Container, TermSnap TextWrap normally runs as a local UI extension on the Bazzite desktop and can preserve terminal colors with host `wl-paste`. The **Terminal Colors** checkbox is disabled if no valid HTML is available for that capture. Background-colored spaces are preserved, including with text wrapping enabled, when VS Code exports them as styled HTML spans. If VS Code omits a color from the HTML clipboard, TermSnap cannot reconstruct it. Try `bash examples/termsnap-demo-ascii.sh` to test both background and foreground swatches. This feature only preserves existing terminal colors—it does not invent ANSI highlighting for uncolored text. Do not paste arbitrary clipboard HTML into the preview; TermSnap-TextWrap parses and reconstructs allowlisted styles only.
 
 **Note:** The terminal's original plain-text selection is copied to the system clipboard when you capture, just as before. Colorized output is preserved inside the preview and PNG, not in the **Copy Text** action.
 

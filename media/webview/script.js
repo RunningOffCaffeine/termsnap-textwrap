@@ -44,9 +44,10 @@ window.initTermSnapTextWrap = (initialData) => {
   // Parse the terminal HTML without inserting unsafe clipboard HTML.
   const capturedLines = parseTerminalHtml(html);
 
-  // VS Code's HTML and plain-text serializers can disagree on
-  // whitespace, Nerd Font glyphs, and terminal line wrapping.
-  // Validate individual lines instead of rejecting all colors.
+  // VS Code may copy background-colored spaces in text/html but omit their
+  // entire row from text/plain. Match the nonempty lines first, then restore
+  // explicitly painted HTML-only rows between matched lines. Uncolored padding
+  // remains plain text to avoid rendering the terminal's empty screen width.
   const plainLines = rawText.replace(/\r\n/g, "\n").split("\n");
 
   const matchKey = (value) =>
@@ -56,62 +57,126 @@ window.initTermSnapTextWrap = (initialData) => {
       .replace(/[\u200b-\u200d\ufeff]/g, "")
       .replace(/[ \t]+$/g, "");
 
+  const plainKeys = plainLines.map(matchKey);
   const htmlKeys =
     capturedLines ?
       capturedLines.map((line) => matchKey(line.textContent || ""))
     : [];
 
-  let htmlIndex = 0;
+  const alignedIndices = Array(plainLines.length).fill(-1);
+  const anchors = [{ plain: -1, html: -1 }];
+  let htmlCursor = 0;
   let matchedChars = 0;
 
-  const alignedLines = plainLines.map((plain, i) => {
-    const key = matchKey(plain);
-    let match = -1;
+  for (let i = 0; i < plainKeys.length; i++) {
+    if (!plainKeys[i]) continue;
+    // xterm can serialize extra padding rows or split a wrapped line.
+    const next = Math.min(htmlKeys.length, htmlCursor + 16);
+    for (let j = htmlCursor; j < next; j++) {
+      if (htmlKeys[j] === plainKeys[i]) {
+        alignedIndices[i] = j;
+        anchors.push({ plain: i, html: j });
+        matchedChars += plainKeys[i].length;
+        htmlCursor = j + 1;
+        break;
+      }
+    }
+  }
+  anchors.push({ plain: plainLines.length, html: htmlKeys.length });
 
-    // Search a few rows ahead to accommodate extra HTML rows.
-    if (key) {
-      for (let offset = 0; offset <= 2; offset++) {
-        const index = htmlIndex + offset;
+  function hasColoredBackgroundSpaces(line) {
+    if (!line || !/^[ \t\u00a0]*$/.test(line.textContent || "")) return false;
+    return Array.from(line.querySelectorAll("span")).some(
+      (span) =>
+        Boolean(span.style.backgroundColor) &&
+        /[ \t\u00a0]/.test(span.textContent || ""),
+    );
+  }
 
-        if (index < htmlKeys.length && htmlKeys[index] === key) {
-          match = index;
-          break;
+  // Extra HTML-only painted rows are inserted into the preview, not the raw
+  // clipboard string. Nonempty text anchors on either side make the alignment
+  // safe; the overall text-match threshold below still rejects stale HTML.
+  const beforePlain = new Map();
+  let matchedBackgroundRows = 0;
+  if (capturedLines) {
+    // Special case: the selected text itself contains only painted spaces.
+    // This cannot use nonempty anchors, so require an exact row count.
+    if (
+      plainKeys.every((key) => !key) &&
+      plainLines.length === htmlKeys.length
+    ) {
+      for (let i = 0; i < htmlKeys.length; i++) {
+        if (hasColoredBackgroundSpaces(capturedLines[i])) {
+          alignedIndices[i] = i;
+          matchedBackgroundRows++;
         }
       }
     }
+    for (let k = 1; k < anchors.length; k++) {
+      const left = anchors[k - 1];
+      const right = anchors[k];
+      const blankPlain = [];
+      const paintedHtml = [];
+      for (let i = left.plain + 1; i < right.plain; i++) {
+        if (!plainKeys[i]) blankPlain.push(i);
+      }
+      for (let j = left.html + 1; j < right.html; j++) {
+        if (!htmlKeys[j] && hasColoredBackgroundSpaces(capturedLines[j])) {
+          paintedHtml.push(j);
+        }
+      }
 
-    if (match >= 0 && capturedLines) {
-      htmlIndex = match + 1;
-      matchedChars += key.length;
-      return capturedLines[match];
+      // Avoid including arbitrary HTML from a different clipboard capture.
+      // At least one neighboring nonempty line must be matched. A completely
+      // whitespace-only selection is handled separately below.
+      if (
+        !paintedHtml.length ||
+        (left.plain < 0 && right.plain >= plainLines.length)
+      ) {
+        continue;
+      }
+
+      const paired = Math.min(blankPlain.length, paintedHtml.length);
+      for (let i = 0; i < paired; i++) {
+        alignedIndices[blankPlain[i]] = paintedHtml[i];
+        matchedBackgroundRows++;
+      }
+
+      // xterm may include one or more painted rows absent from text/plain.
+      // Only restore those explicitly painted rows (never ordinary padding).
+      if (paintedHtml.length > paired) {
+        const extras = paintedHtml.slice(paired, paired + 32);
+        beforePlain.set(right.plain, extras);
+        matchedBackgroundRows += extras.length;
+      }
     }
+  }
 
-    // If this line differs, retain its original plain text.
-    // Other matching lines can still keep their colors.
-    const fallback = document.createDocumentFragment();
-    fallback.appendChild(document.createTextNode(plain));
-
-    const nextKey =
-      i + 1 < plainLines.length ? matchKey(plainLines[i + 1]) : "";
-
-    if (
-      htmlIndex < htmlKeys.length &&
-      (!nextKey || htmlKeys[htmlIndex] !== nextKey)
-    ) {
-      htmlIndex++;
+  const alignedLines = [];
+  for (let i = 0; i <= plainLines.length; i++) {
+    if (capturedLines && beforePlain.has(i)) {
+      for (const j of beforePlain.get(i)) alignedLines.push(capturedLines[j]);
     }
+    if (i === plainLines.length) break;
+    const index = alignedIndices[i];
+    if (index >= 0 && capturedLines) {
+      alignedLines.push(capturedLines[index]);
+    } else {
+      const fallback = document.createDocumentFragment();
+      fallback.appendChild(document.createTextNode(plainLines[i]));
+      alignedLines.push(fallback);
+    }
+  }
 
-    return fallback;
-  });
-
-  // Require enough matching text to reject unrelated clipboard HTML.
-  const totalChars = plainLines.reduce(
-    (sum, line) => sum + matchKey(line).length,
-    0,
-  );
-
+  const totalChars = plainKeys.reduce((sum, key) => sum + key.length, 0);
+  const matchingText =
+    totalChars > 0 && matchedChars > 0 && matchedChars >= totalChars * 0.5;
+  const matchingBackgroundOnly =
+    totalChars === 0 &&
+    matchedBackgroundRows > 0 &&
+    plainLines.length === htmlKeys.length;
   const formattedLines =
-    capturedLines && matchedChars > 0 && matchedChars >= totalChars * 0.5 ?
+    capturedLines && (matchingText || matchingBackgroundOnly) ?
       alignedLines
     : null;
 
@@ -453,7 +518,10 @@ window.initTermSnapTextWrap = (initialData) => {
     ).catch(async (error) => {
       // Avoid browser auto-downscaling or allocating an enormous canvas.
       if (String(error).includes("too large for the fast canvas")) throw error;
-      console.warn("TermSnap: fast renderer unavailable; using fallback:", error);
+      console.warn(
+        "TermSnap: fast renderer unavailable; using fallback:",
+        error,
+      );
       const blob = await htmlToImage.toBlob(captureArea, {
         pixelRatio: scale,
         skipAutoScale: true,
@@ -530,7 +598,10 @@ window.initTermSnapTextWrap = (initialData) => {
           new ClipboardItem({ "image/png": blob }),
         ]);
       } catch (clipboardError) {
-        console.info("TermSnap: using native clipboard fallback:", clipboardError);
+        console.info(
+          "TermSnap: using native clipboard fallback:",
+          clipboardError,
+        );
         vscode.postMessage({ type: "copy", dataUrl: await toDataUrl(blob) });
       }
     } catch (error) {
