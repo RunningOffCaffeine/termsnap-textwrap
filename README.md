@@ -2,15 +2,9 @@
 
 Capture beautiful, Carbon-style screenshots of your terminal output — directly from VS Code.
 
-## Screenshots
+## Terminal capture
 
-### Terminal capture
-
-![TermSnap TextWrap Preview](https://raw.githubusercontent.com/RunningOffCaffeine/termsnap-textwrap/main/media/demo-tw.png)
-
-### Colored logs and adjustable wrapping
-
-![TermSnap TextWrap - Colored Terminal Output](https://raw.githubusercontent.com/RunningOffCaffeine/termsnap-textwrap/main/media/demo-fast.png)
+![TermSnap TextWrap Preview](https://raw.githubusercontent.com/RunningOffCaffeine/termsnap-textwrap/main/media/demo-ascii.png)
 
 ## Why TermSnap-TextWrap?
 
