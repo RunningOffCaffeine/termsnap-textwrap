@@ -10,16 +10,7 @@ Capture beautiful, Carbon-style screenshots of your terminal output — directly
 
 ### Colored logs and adjustable wrapping
 
-<!--
-To enable the second screenshot:
-1. Run: bash examples/demo-second.sh
-2. Capture the printed output in VS Code with TermSnap. Enable Terminal Colors,
-   Wrap Text (try 640 px), Andromeda, and PNG Scale 2x.
-3. Save the image as media/demo-fast.png and push it to GitHub's main branch.
-4. Remove the opening and closing HTML comment markers surrounding the image.
-
 ![TermSnap TextWrap - Colored Terminal Output](https://raw.githubusercontent.com/RunningOffCaffeine/termsnap-textwrap/main/media/demo-fast.png)
--->
 
 ## Why TermSnap-TextWrap?
 
