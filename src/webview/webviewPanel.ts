@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { getWebviewContent } from "./getWebviewContent";
-import { handleMessage } from "./messageHandler";
+import { handleMessage, clearPendingSaves } from "./messageHandler";
 import { getConfig } from "../config";
 import { CapturedTerminal } from "../captureTerminal";
 
@@ -13,6 +13,7 @@ export function createOrShowPanel(
   const config = getConfig();
 
   if (currentPanel) {
+    clearPendingSaves();
     currentPanel.reveal(vscode.ViewColumn.Beside);
     currentPanel.webview.html = getWebviewContent(
       currentPanel.webview,
@@ -45,9 +46,10 @@ export function createOrShowPanel(
     config,
   );
 
-  panel.webview.onDidReceiveMessage((message) => handleMessage(message));
+  panel.webview.onDidReceiveMessage((message) => handleMessage(message, panel));
 
   panel.onDidDispose(() => {
+    clearPendingSaves();
     currentPanel = undefined;
   });
 

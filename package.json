@@ -5,7 +5,7 @@
     "ui"
   ],
   "description": "Capture beautiful terminal screenshots with adjustable text wrapping, preserved terminal colors, and customizable themes.",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "publisher": "RunningOffCaffeine",
   "icon": "media/icon-tw.png",
   "license": "MIT",
@@ -119,6 +119,17 @@
           "minimum": 240,
           "maximum": 2400,
           "description": "Terminal window width in pixels when text wrapping is enabled (excluding the outer screenshot background). Can also be adjusted in the preview."
+        },
+        "termsnap.exportScale": {
+          "type": "integer",
+          "default": 2,
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "description": "PNG export resolution multiplier (1x–4x). 2x is the default for faster screenshots; 4x creates 16 times the pixels of 1x."
         },
         "termsnap.showWindowControls": {
           "type": "boolean",

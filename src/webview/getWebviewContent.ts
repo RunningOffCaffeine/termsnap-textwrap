@@ -23,6 +23,10 @@ export function getWebviewContent(
     ),
   );
 
+  const fastExportUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(extensionUri, "media", "webview", "fast-export.js"),
+  );
+
   const nonce = getNonce();
 
   // Escape HTML entities in terminal text
@@ -37,7 +41,7 @@ export function getWebviewContent(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}'; connect-src ${webview.cspSource}; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} data:;">
   <link href="${stylesUri}" rel="stylesheet">
   <title>TermSnap-TextWrap Preview</title>
 </head>
@@ -97,6 +101,12 @@ export function getWebviewContent(
         Line Numbers
       </label>
     </div>
+    <div class="toolbar-group">
+      <label for="export-scale">PNG Scale</label>
+      <select id="export-scale">
+        ${[1, 2, 3, 4].map((scale) => `<option value="${scale}" ${config.exportScale === scale ? "selected" : ""}>${scale}×</option>`).join("")}
+      </select>
+    </div>
     <div class="toolbar-group toolbar-actions">
       <button id="btn-save" class="btn btn-primary">Save as PNG</button>
       <button id="btn-copy" class="btn btn-secondary">Copy Image</button>
@@ -129,6 +139,7 @@ export function getWebviewContent(
   </div>
 
   <script nonce="${nonce}" src="${htmlToImageUri}"></script>
+  <script nonce="${nonce}" src="${fastExportUri}"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
   <script nonce="${nonce}">
     window.initTermSnapTextWrap(${JSON.stringify({ config, html: capture.html ?? null }).replace(/</g, "\\u003c")});

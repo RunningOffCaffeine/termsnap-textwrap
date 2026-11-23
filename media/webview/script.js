@@ -30,6 +30,14 @@ window.initTermSnapTextWrap = (initialData) => {
   const btnSave = document.getElementById("btn-save");
   const btnCopy = document.getElementById("btn-copy");
   const btnCopyText = document.getElementById("btn-copy-text");
+  const exportScaleSelect = document.getElementById("export-scale");
+
+  // Reuse the PNG if the user exports the same preview more than once.
+  // Every appearance or content change invalidates the cached image.
+  let cachedExport = null;
+  function invalidateExport() {
+    cachedExport = null;
+  }
 
   // Store the raw text (unescaped) for line-number toggling
   let rawText = terminalText.textContent;
@@ -145,6 +153,7 @@ window.initTermSnapTextWrap = (initialData) => {
     if (theme === "custom") {
       applyCustomColors();
     }
+    invalidateExport();
     notifySettingsChanged("theme", theme);
   });
 
@@ -153,6 +162,7 @@ window.initTermSnapTextWrap = (initialData) => {
     const size = fontSizeSlider.value;
     fontSizeValue.textContent = size;
     terminalBody.style.fontSize = size + "px";
+    invalidateExport();
     notifySettingsChanged("fontSize", Number(size));
   });
 
@@ -161,6 +171,7 @@ window.initTermSnapTextWrap = (initialData) => {
     const pad = paddingSlider.value;
     paddingValue.textContent = pad;
     terminalBody.style.padding = pad + "px";
+    invalidateExport();
     notifySettingsChanged("padding", Number(pad));
   });
 
@@ -178,6 +189,7 @@ window.initTermSnapTextWrap = (initialData) => {
 
   function setWrapWidth(value, persist = false, updateInput = true) {
     wrapWidth = clampWidth(value);
+    invalidateExport();
     if (updateInput) {
       wrapWidthInput.value = String(wrapWidth);
     }
@@ -193,6 +205,7 @@ window.initTermSnapTextWrap = (initialData) => {
   function applyWrapping() {
     const enabled = wrapTextCheckbox.checked;
     terminalText.classList.toggle("wrap-enabled", enabled);
+    invalidateExport();
     terminalWindow.style.width = enabled ? wrapWidth + "px" : "";
     terminalWindow.style.maxWidth = enabled ? "none" : "";
     wrapWidthInput.disabled = !enabled;
@@ -269,6 +282,7 @@ window.initTermSnapTextWrap = (initialData) => {
   windowControlsCheckbox.addEventListener("change", () => {
     const show = windowControlsCheckbox.checked;
     titleBar.style.display = show ? "" : "none";
+    invalidateExport();
     notifySettingsChanged("showWindowControls", show);
   });
 
@@ -376,6 +390,7 @@ window.initTermSnapTextWrap = (initialData) => {
   }
 
   function renderText(showLineNumbers) {
+    invalidateExport();
     terminalText.classList.toggle("with-line-numbers", showLineNumbers);
     const colorsActive =
       !terminalColorsCheckbox.disabled && terminalColorsCheckbox.checked;
@@ -424,51 +439,104 @@ window.initTermSnapTextWrap = (initialData) => {
     renderText(config.showLineNumbers);
   }
 
-  // ── Save as PNG ──────────────────────────────────────
+  // ── Fast PNG export ───────────────────────────────────
+  // A stylesheet-based SVG snapshot avoids per-span getComputedStyle calls.
+  // html-to-image remains available if a renderer fails on a particular host.
+  function getExportBlob() {
+    const scale = Number(exportScaleSelect.value);
+    if (cachedExport && cachedExport.scale === scale) {
+      return cachedExport.promise;
+    }
+    const promise = window.TermSnapFastExport.renderPngBlob(
+      captureArea,
+      scale,
+    ).catch(async (error) => {
+      // Avoid browser auto-downscaling or allocating an enormous canvas.
+      if (String(error).includes("too large for the fast canvas")) throw error;
+      console.warn("TermSnap: fast renderer unavailable; using fallback:", error);
+      const blob = await htmlToImage.toBlob(captureArea, {
+        pixelRatio: scale,
+        skipAutoScale: true,
+      });
+      if (!blob) throw new Error("PNG fallback returned no image");
+      return blob;
+    });
+    cachedExport = { scale, promise };
+    promise.catch(() => {
+      if (cachedExport && cachedExport.promise === promise) cachedExport = null;
+    });
+    return promise;
+  }
+
+  function toDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  exportScaleSelect.addEventListener("change", () => {
+    invalidateExport();
+    notifySettingsChanged("exportScale", Number(exportScaleSelect.value));
+  });
+
+  // Begin the save dialog immediately, while the image renders in parallel.
+  // A unique ID prevents stale save-dialog responses from saving the wrong PNG.
+  let nextSaveId = 0;
+  const saveDialogResponses = new Map();
   btnSave.addEventListener("click", async () => {
     btnSave.disabled = true;
     btnSave.textContent = "Exporting...";
+    const requestId = `${Date.now()}-${++nextSaveId}`;
+    const choice = new Promise((resolve) => {
+      saveDialogResponses.set(requestId, resolve);
+    });
+    vscode.postMessage({ type: "requestSave", requestId });
     try {
-      const dataUrl = await htmlToImage.toPng(captureArea, {
-        pixelRatio: 4,
-      });
-      vscode.postMessage({ type: "save", dataUrl });
-    } catch (err) {
-      console.error("TermSnap-TextWrap export error:", err);
+      const [accepted, blob] = await Promise.all([choice, getExportBlob()]);
+      if (accepted) {
+        vscode.postMessage({
+          type: "save",
+          requestId,
+          dataUrl: await toDataUrl(blob),
+        });
+      }
+    } catch (error) {
+      console.error("TermSnap export error:", error);
+      vscode.postMessage({ type: "cancelSave", requestId });
+      btnSave.title = String(error);
+      vscode.postMessage({ type: "exportError", detail: String(error) });
     } finally {
+      saveDialogResponses.delete(requestId);
       btnSave.disabled = false;
       btnSave.textContent = "Save as PNG";
     }
   });
 
-  // ── Copy to clipboard ────────────────────────────────
+  // Browser clipboard first; if denied, send the same PNG to the UI extension
+  // host for wl-copy/xclip. Never rasterize the same screenshot twice.
   btnCopy.addEventListener("click", async () => {
     btnCopy.disabled = true;
     btnCopy.textContent = "Copying...";
     try {
-      const dataUrl = await htmlToImage.toPng(captureArea, {
-        pixelRatio: 4,
-      });
-
-      // Convert data URL to blob and use Clipboard API
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob }),
-      ]);
-
-      vscode.postMessage({ type: "copy", dataUrl });
-    } catch (err) {
-      // Fallback: send to extension for handling
-      console.error("TermSnap-TextWrap clipboard error:", err);
+      const blob = await getExportBlob();
       try {
-        const dataUrl = await htmlToImage.toPng(captureArea, {
-          pixelRatio: 4,
-        });
-        vscode.postMessage({ type: "copy", dataUrl });
-      } catch (e) {
-        console.error("TermSnap-TextWrap fallback error:", e);
+        if (!navigator.clipboard?.write || !window.ClipboardItem) {
+          throw new Error("Browser image clipboard API unavailable");
+        }
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+      } catch (clipboardError) {
+        console.info("TermSnap: using native clipboard fallback:", clipboardError);
+        vscode.postMessage({ type: "copy", dataUrl: await toDataUrl(blob) });
       }
+    } catch (error) {
+      console.error("TermSnap copy image error:", error);
+      btnCopy.title = String(error);
+      vscode.postMessage({ type: "exportError", detail: String(error) });
     } finally {
       btnCopy.disabled = false;
       btnCopy.textContent = "Copy Image";
@@ -492,7 +560,13 @@ window.initTermSnapTextWrap = (initialData) => {
   // ── Listen for messages from extension ───────────────
   window.addEventListener("message", (event) => {
     const message = event.data;
-    if (message.type === "updateText") {
+    if (message.type === "saveDestination") {
+      const respond = saveDialogResponses.get(message.requestId);
+      if (respond) {
+        saveDialogResponses.delete(message.requestId);
+        respond(Boolean(message.accepted));
+      }
+    } else if (message.type === "updateText") {
       rawText = message.text;
       // A new plain-text payload doesn't correspond to the previous HTML.
       terminalColorsCheckbox.checked = false;

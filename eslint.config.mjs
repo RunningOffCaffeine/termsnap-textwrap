@@ -28,7 +28,7 @@ export default defineConfig([
 
   // VS Code webview (Browser JavaScript)
   {
-    files: ["media/webview/script.js"],
+    files: ["media/webview/script.js", "media/webview/fast-export.js"],
     extends: [js.configs.recommended],
     languageOptions: {
       sourceType: "script",
